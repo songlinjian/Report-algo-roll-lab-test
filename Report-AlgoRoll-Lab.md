@@ -52,8 +52,6 @@ According to the formula suggest in RFC5011, queryInterval = MAX(1 hr, MIN (15 d
 
 We rolled the algorithm twice, we found the algorithm rollover with only KSK works for the resolver in Case 1 (with -P option) and Case 2. The BIND and Unbound can work with it without change on ZSK. 
 
-Note that -P option is to disable post sign verification tests and enable the BIND to roll the algorithm without changes on ZSK.([More information of options of dnssec-signzone](https://bind.isc.org/doc/arm/9.11/man.dnssec-signzone.html)).
-
 ### Configuration error in lower version of PowerDNS
 
 PowerDNS (pdns-recursor 4.0.0~alpha2-2ubuntu0.1) resolver failed when configure multiple algorithm KSK.
