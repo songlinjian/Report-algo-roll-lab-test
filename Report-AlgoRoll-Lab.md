@@ -2,7 +2,7 @@
  
 In this April we called participation of second algorithm rollover in a controlled lab environment. We try rolled the algorithm rollover in root level with four approaches and record the monitoring data every 10 minutes. The results help us better understand the protocol as well as the gap between protocol and implementation. In this post we skip a full introduction of algorithm rollover background and the testing proposal of the Second algorithm rollover test. Because that information was well documented in previous posts : [Call for participation](https://yeti-dns.org/yeti/blog/2019/04/02/call-for-participation-algorithm-roll.html) and [Algorithm test and monitoring page](https://yeti-dns.org/alg-roll-test.html). Instead, this post only demonstrates the interesting results and findings which give us a second thought on algorithm rollover for root.
 
-Note that in this test we use BIND9.11.5-P1, UNBOUND1.8.3, PowerDNS4.2.0 alpha1 as our testing resolvers.
+Note that in this test we use BIND9.11.5-P1, UNBOUND1.8.3, PowerDNS recursor 4.2.0 alpha1 as our testing resolvers.
 
 ## Experience and Findings
 
@@ -29,17 +29,17 @@ Both [RFC4035](https://tools.ietf.org/html/rfc4035#section-2.1) and [RFC6781](ht
 
 Case 1 is designed to test against this specification in which the new algorithm (new ECDSA KSK) is re-published without corresponding RRSIG. Firstly we use dnssec-signzone without -P option, and the post sign verification tests failed. With -P option, a signed zone was generated and published. 
 
-On the resolver side, it is seems that resolver have no sense of that specification at all (requirement ). The introduction of pre-published ECDSA KSK transitioned the state of resolver from Start to AddPend and start the Add Hold-Down Time ([RFC5011 State table](https://tools.ietf.org/html/rfc5011#section-4)). And the state transitioned to Valid state after the timer expired. In addition no validation failure was reported during the Algorithm rollover in case 1. 
+On the resolver side, it is seems that resolver have no sense of that specification at all (requirement). The introduction of pre-published ECDSA KSK transitioned the state of resolver from Start to AddPend and start the Add Hold-Down Time ([RFC5011 State table](https://tools.ietf.org/html/rfc5011#section-4)). And the state transitioned to Valid state after the timer expired. In addition no validation failure was reported during the Algorithm rollover in case 1. 
 
-It is known that Double-DS has the benefit of generating smaller size of DNS response. In the context of RFC5011, it avoids the exchange with parent as well which is viewed as the major drawback of Double-DS approach. So the question comes: is it worth of a second thought on Double-DS for algorithm rollover in future ? Any risk ?
+It is known that Double-DS has the benefit of generating smaller size of DNS response. In the context of RFC5011, it requires no exchange with parent in root level. Exchanging with parent is viewed as the major drawback of Double-DS approach. So the question comes: is it worth of a second thought on Double-DS for algorithm rollover in future ? Any risk ?
 
 ### Difference behaviors between BIND and Unbound NO.1 (To be confirmed)
 
-It was reported in our [first algorithm rollover test](https://yeti-dns.org/yeti/blog/2019/04/02/call-for-participation-algorithm-roll.html) that BIND and Unbound response differently when validation failures on DNSSKEY record. 
+It was reported in our [first algorithm rollover test](https://yeti-dns.org/yeti/blog/2019/04/02/call-for-participation-algorithm-roll.html) that BIND and Unbound responsed differently when they had validation failures. 
 
-In the first test, an accidental misconfiguration of ZSK’s inactive time which results no active signing key in the middle of the rollover and causes validation failure. We recovered it with a new ZSK but it still had impact on resolver. As a response to this failure, it was observed BIND resolver restarts the Add Hold-Down Timer of new key/algorithm for another 30 days when new valid signing key is available.
+In the first test, an misconfiguration of old RSA KSK with an earlier inactive time which results no active signing key in the middle of the rollover and causes validation failure. We reset the old RSA KSK to be active but it still had impact on resolvers. As a response to this failure, it was observed BIND resolver restarts the Add Hold-Down Timer of the new key/algorithm for another 30 days when the old RSA KSK became active.
 
-In the contrast, Unbound continued the timer and trusted the KSK/Algorithm after the timer expired. It is inferred that BIND treats the failure as KeyRem event, but UNBOUND treat it as a non-rfc5011 event like network failure. <!-- UNBOUND stops the timer and continues it after failure resolved. -->
+In the contrast, Unbound's timer did not stoped and trusted the KSK/Algorithm after the timer expired. It is inferred that BIND treats the failure as KeyRem event, but UNBOUND treat it as a non-rfc5011 event like network failure. <!-- UNBOUND stops the timer and continues it after failure resolved. -->
 
 ### Difference behaviors between BIND and Unbound NO.2
 
@@ -50,11 +50,13 @@ According to the formula suggest in RFC5011, queryInterval = MAX(1 hr, MIN (15 d
 
 ### Algorithm rollover without change on ZSK
 
-We rolled the algorithm twice in the past, we found the algorithm rollover with only KSK works for the resolver in Case 1 (with -P option) and Case 2.
+We rolled the algorithm twice, we found the algorithm rollover with only KSK works for the resolver in Case 1 (with -P option) and Case 2. The BIND and Unbound can work with it without change on ZSK. 
+
+Note that -P option is to disable post sign verification tests and enable the BIND to roll the algorithm without changes on ZSK.([More information of options of dnssec-signzone](https://bind.isc.org/doc/arm/9.11/man.dnssec-signzone.html)).
 
 ### Configuration error in lower version of PowerDNS
 
-PowerDNS (version?) resolver failed when configure multiple algorithm KSK. (To be confirmed)
+PowerDNS (pdns-recursor 4.0.0~alpha2-2ubuntu0.1) resolver failed when configure multiple algorithm KSK.
 
 ### Stand-by Key
 
@@ -66,7 +68,9 @@ After two tests on algorithm rollover in lab environment, we have following conc
 
 * The dnssec-signzone of BIND is a handy tool to deploy DNSSEC for most cases. But for algorithm rollover, we should take care of the case when old ZSK is used to sign the DNSKEY record.
 
-* Via Case 1 we learn the issue of Double-DS approach in algorithm rollover. And if anyone insist to roll the algorithm using Double-DNS approach, please use "-P" option of dnssec-signzone. The risk is unknown so far.
+* Via Case 1 we learn the issue of Double-DS approach in algorithm rollover. And if anyone insist to roll the algorithm using Double-DNS approach, please use "
+
+" option of dnssec-signzone. The risk is unknown so far.
 
 * Case 2 prove the capability of rolling algorithm without ZSK. But the tests lack diversity of DNS resolver to provide a convincing result. It is worth to dig in depth. 
 
