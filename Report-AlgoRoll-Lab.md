@@ -21,7 +21,7 @@ in which, -K option specifies a directory to search for DNSSEC keys (private key
 
 Everything seems perfect using dnssec-signzone to roll the algorithm by placing different keys in ROOT_KEY directory. However, it was found that when old RSA KSK is revoked or deleted, the RSA ZSK will be used to sign both the zone and DNSKEY records, even when -x option is set. -x option means "only sign the DNSKEY RRset with key-signing keys".
 
-There is a guess that smart signing (-S option) of BIND will ignore key flag when there is only a private key available for one algorithm. As a result BIND signs DNSKEY records with both New ECDSA KSK and old RSA ZSK. We corrected this with special script by manually stripping the DNSKEY RRSIG by RSA ZSK when the algorithm was really rolled from RSA to ECDSA. Operators who are going to implement algorithm rollover should notice and take care of it.
+There is a guess that smart signing (-S option) of BIND will ignore key flag when there is only a private key available for one algorithm. As a result BIND signs DNSKEY records with both New ECDSA KSK and old RSA ZSK. We corrected this with special script manually  by stripping the DNSKEY RRSIG by RSA ZSK when the algorithm was really rolled from RSA to ECDSA. Operators who are going to implement algorithm rollover using dnssec-signzoe should notice and take care of it.
 
 ### Double-DS for Algorithm Rollover in Case 1
 
